@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mentor Código Escuela 4.0 - Planificador de Visitas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .bg-slate-50 { background-color: #f8fafc; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center">
+    <div class="flex items-center space-x-3">
+      <span class="text-2xl">🤖</span>
+      <h1 class="text-xl font-bold">Mentor Código Escuela 4.0 — Planificador de Visitas</h1>
+    </div>
+    <div class="space-x-2">
+      <button onclick="exportData()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-xs font-semibold">📥 Exportar JSON</button>
+      <label class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">
+        📤 Importar JSON <input type="file" onchange="importData(event)" class="hidden" accept=".json">
+      </label>
+    </div>
+  </header>
+
+  <!-- Pestañas de Navegación -->
+  <nav class="bg-white border-b border-slate-200 px-6 flex space-x-4">
+    <button id="tab-btn-cal" onclick="switchTab('cal')" class="py-3 px-4 font-bold text-blue-600 border-b-2 border-blue-600">📅 Planning del Curso</button>
+    <button id="tab-btn-centros" onclick="switchTab('centros')" class="py-3 px-4 font-bold text-slate-500 hover:text-slate-700">🏫 Gestión de Centros</button>
+    <button id="tab-btn-historial" onclick="switchTab('historial')" class="py-3 px-4 font-bold text-slate-500 hover:text-slate-700">📋 Listado de Visitas</button>
+  </nav>
+
+  <!-- Contenido Principal -->
+  <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+
+    <!-- Pestaña 1: Calendario -->
+    <section id="tab-cal" class="space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div class="flex items-center space-x-3">
+          <label class="font-bold text-sm text-slate-700">🔍 Filtrar por Centro:</label>
+          <select id="filter-centro" onchange="renderCalendar()" class="border border-slate-300 rounded px-3 py-1.5 text-sm bg-slate-50 focus:outline-none focus:border-blue-500">
+            <option value="0">Todos los centros</option>
+          </select>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="changeMonth(-1)" class="bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded text-sm font-semibold">◀ Mes Ant.</button>
+          <span id="cal-month-title" class="font-bold text-lg w-44 text-center"></span>
+          <button onclick="changeMonth(1)" class="bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded text-sm font-semibold">Mes Sig. ▶</button>
+          <button onclick="goToday()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded text-sm font-semibold ml-2">Hoy</button>
+        </div>
+      </div>
+
+      <!-- Cuadrícula del Calendario -->
+      <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <div class="grid grid-cols-7 bg-slate-200 text-slate-700 text-center font-bold text-xs py-2 border-b border-slate-300">
+          <div>Lunes</div><div>Martes</div><div>Miércoles</div><div>Jueves</div><div>Viernes</div><div>Sábado</div><div>Domingo</div>
+        </div>
+        <div id="calendar-grid" class="grid grid-cols-7 auto-rows-fr bg-slate-200 gap-[1px]"></div>
+      </div>
+    </section>
+
+    <!-- Pestaña 2: Centros -->
+    <section id="tab-centros" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200 space-y-3">
+        <h2 id="centro-form-title" class="font-bold text-lg text-slate-800 border-b pb-2">➕ Datos del Centro</h2>
+        <input type="hidden" id="c-id">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Nombre del Centro *</label>
+          <input type="text" id="c-nombre" class="w-full border rounded px-3 py-1.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Código del Centro</label>
+          <input type="text" id="c-codigo" class="w-full border rounded px-3 py-1.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Localidad</label>
+          <input type="text" id="c-localidad" class="w-full border rounded px-3 py-1.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Etapa Educativa</label>
+          <select id="c-etapa" class="w-full border rounded px-3 py-1.5 text-sm">
+            <option>Infantil</option>
+            <option selected>Primaria</option>
+            <option>Secundaria</option>
+            <option>Infantil y Primaria</option>
+            <option>Centro Integrado (CEIPO/IES)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Contacto (Nombre)</label>
+          <input type="text" id="c-contacto" class="w-full border rounded px-3 py-1.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Contacto (Email)</label>
+          <input type="email" id="c-email" class="w-full border rounded px-3 py-1.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Color de Referencia</label>
+          <input type="color" id="c-color" value="#3b82f6" class="h-9 w-full rounded border p-1 cursor-pointer">
+        </div>
+        <div class="flex space-x-2 pt-2">
+          <button onclick="saveCentro()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded text-sm">💾 Guardar Centro</button>
+          <button onclick="clearCentroForm()" class="bg-slate-200 hover:bg-slate-300 font-semibold px-3 py-2 rounded text-sm">Limpiar</button>
+        </div>
+      </div>
+
+      <div class="md:col-span-2 bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+        <h2 class="font-bold text-lg text-slate-800 border-b pb-2 mb-4">🏫 Centros Registrados</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr class="bg-slate-100 border-b border-slate-200 text-slate-600">
+                <th class="p-2">Color</th>
+                <th class="p-2">Nombre</th>
+                <th class="p-2">Código</th>
+                <th class="p-2">Localidad</th>
+                <th class="p-2">Etapa</th>
+                <th class="p-2 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="centros-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pestaña 3: Historial -->
+    <section id="tab-historial" class="hidden bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+      <h2 class="font-bold text-lg text-slate-800 border-b pb-2 mb-4">📋 Historial Completo de Visitas</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600">
+              <th class="p-2">Fecha</th>
+              <th class="p-2">Centro</th>
+              <th class="p-2">Modalidad</th>
+              <th class="p-2">Planificación / Reto</th>
+              <th class="p-2">Observaciones</th>
+            </tr>
+          </thead>
+          <tbody id="historial-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Planificación de Visita -->
+  <div id="visit-modal" class="fixed inset-0 bg-slate-900/50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white p-4 flex justify-between items-center">
+        <h3 id="modal-date-title" class="font-bold text-lg">📅 Planificación del Día</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
+      </div>
+      <div class="p-5 space-y-4">
+        <input type="hidden" id="modal-date-str">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Centro Educativo *</label>
+          <select id="modal-centro-id" class="w-full border rounded px-3 py-2 text-sm bg-slate-50"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Modalidad de la Actividad</label>
+          <select id="modal-modalidad" class="w-full border rounded px-3 py-2 text-sm bg-slate-50">
+            <option>Conectada (Scratch, MakeCode, Python)</option>
+            <option>Desconectada (Unplugged / Lógica / Juegos)</option>
+            <option>Robótica / Hardware (Micro:bit, mBot, Spike)</option>
+            <option>Asesoramiento Digital / TDE</option>
+            <option>Formación de Profesorado</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Planificación / Reto</label>
+          <textarea id="modal-plan" rows="3" class="w-full border rounded p-2 text-sm" placeholder="Detalles de la sesión..."></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Observaciones / Materiales</label>
+          <textarea id="modal-obs" rows="2" class="w-full border rounded p-2 text-sm" placeholder="Ej: Traer placas Micro:bit..."></textarea>
+        </div>
+      </div>
+      <div class="bg-slate-100 p-4 flex justify-between items-center border-t">
+        <button id="btn-delete-visit" onclick="deleteVisit()" class="bg-red-500 hover:bg-red-600 text-white font-bold px-3 py-1.5 rounded text-xs hidden">🗑️ Eliminar</button>
+        <div class="space-x-2 ml-auto">
+          <button onclick="closeModal()" class="bg-slate-300 hover:bg-slate-400 text-slate-700 font-semibold px-4 py-2 rounded text-xs">Cancelar</button>
+          <button onclick="saveVisit()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded text-xs">💾 Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Estado global de la aplicación
+    let db = {
+      centros: [
+        { id: 1, nombre: "CEIP Código Innovación", codigo: "38001234", localidad: "Santa Cruz", etapa: "Primaria", contacto_nombre: "Coordinador TDE", contacto_email: "tde@ceipcodigo.es", color: "#3b82f6" },
+        { id: 2, nombre: "IES Pensamiento Computacional", codigo: "38005678", localidad: "La Laguna", etapa: "Secundaria", contacto_nombre: "Jefe de Estudios", contacto_email: "estudios@iespc.es", color: "#10b981" },
+        { id: 3, nombre: "CEIP Robótica Futuro", codigo: "38009999", localidad: "Arona", etapa: "Infantil y Primaria", contacto_nombre: "Asesora TIC", contacto_email: "tic@ceiprobotica.es", color: "#f59e0b" }
+      ],
+      visitas: []
+    };
+
+    let currentDate = new Date();
+
+    // Inicialización
+    window.onload = () => {
+      loadStorage();
+      // Agregar visita de demo si está vacío
+      if(db.visitas.length === 0) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        db.visitas.push({ id: 1, centro_id: 1, fecha: todayStr, modalidad: "Conectada (Scratch, MakeCode, Python)", planificacion: "Sesión de iniciación a Scratch con 5º de Primaria.", observaciones: "Traer placas Micro:bit para pruebas." });
+        saveStorage();
+      }
+      renderCalendar();
+      renderCentrosTable();
+      renderHistorial();
+      updateFilterSelect();
+    };
+
+    function saveStorage() { localStorage.setItem('visitas_escuela40_db', JSON.stringify(db)); }
+    function loadStorage() {
+      const stored = localStorage.getItem('visitas_escuela40_db');
+      if (stored) db = JSON.parse(stored);
+    }
+
+    // Navegación de pestañas
+    function switchTab(tab) {
+      document.querySelectorAll('main > section').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+      
+      document.querySelectorAll('nav button').forEach(el => {
+        el.className = "py-3 px-4 font-bold text-slate-500 hover:text-slate-700";
+      });
+      document.getElementById(`tab-btn-${tab}`).className = "py-3 px-4 font-bold text-blue-600 border-b-2 border-blue-600";
+
+      if(tab === 'historial') renderHistorial();
+      if(tab === 'centros') renderCentrosTable();
+    }
+
+    // Lógica del Calendario
+    function renderCalendar() {
+      const grid = document.getElementById('calendar-grid');
+      grid.innerHTML = '';
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+      document.getElementById('cal-month-title').innerText = `${monthNames[month]} ${year}`;
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+
+      // Calcular offset de día de inicio (Lunes = 0)
+      let startDayIndex = firstDay.getDay() - 1;
+      if (startDayIndex === -1) startDayIndex = 6;
+
+      const totalDays = lastDay.getDate();
+      const filterCentroId = parseInt(document.getElementById('filter-centro').value);
+
+      // Celdas vacías previas
+      for (let i = 0; i < startDayIndex; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = "bg-slate-100 min-h-[100px]";
+        grid.appendChild(emptyCell);
+      }
+
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      // Celdas de días
+      for (let day = 1; day <= totalDays; day++) {
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateStr = `${year}-${monthStr}-${dayStr}`;
+
+        const isToday = dateStr === todayStr;
+        const cell = document.createElement('div');
+        cell.className = `bg-white min-h-[100px] p-1 border-t border-slate-100 flex flex-col justify-start cursor-pointer hover:bg-slate-50 transition ${isToday ? 'bg-blue-50/50' : ''}`;
+        cell.onclick = () => openModal(dateStr);
+
+        const dayNum = document.createElement('span');
+        dayNum.className = `text-xs font-bold p-1 rounded-full w-6 h-6 flex items-center justify-center mb-1 ${isToday ? 'bg-blue-600 text-white' : 'text-slate-600'}`;
+        dayNum.innerText = day;
+        cell.appendChild(dayNum);
+
+        // Visitas filtradas del día
+        const dayVisits = db.visitas.filter(v => v.fecha === dateStr && (filterCentroId === 0 || v.centro_id === filterCentroId));
+        dayVisits.forEach(vis => {
+          const centro = db.centros.find(c => c.id === vis.centro_id);
+          const badge = document.createElement('div');
+          badge.className = "text-[11px] text-white px-2 py-0.5 rounded font-semibold truncate mb-1 shadow-sm";
+          badge.style.backgroundColor = centro ? centro.color : '#3b82f6';
+          badge.innerText = `• ${centro ? centro.nombre : 'Centro'}`;
+          cell.appendChild(badge);
+        });
+
+        grid.appendChild(cell);
+      }
+    }
+
+    function changeMonth(delta) {
+      currentDate.setMonth(currentDate.getMonth() + delta);
+      renderCalendar();
+    }
+    function goToday() {
+      currentDate = new Date();
+      renderCalendar();
+    }
+
+    // Modal de Visitas
+    function openModal(dateStr) {
+      document.getElementById('modal-date-str').value = dateStr;
+      document.getElementById('modal-date-title').innerText = `📅 Planificación: ${dateStr}`;
+
+      const select = document.getElementById('modal-centro-id');
+      select.innerHTML = db.centros.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+
+      const existing = db.visitas.find(v => v.fecha === dateStr);
+      const delBtn = document.getElementById('btn-delete-visit');
+
+      if (existing) {
+        select.value = existing.centro_id;
+        document.getElementById('modal-modalidad').value = existing.modalidad;
+        document.getElementById('modal-plan').value = existing.planificacion;
+        document.getElementById('modal-obs').value = existing.observaciones;
+        delBtn.classList.remove('hidden');
+      } else {
+        document.getElementById('modal-plan').value = '';
+        document.getElementById('modal-obs').value = '';
+        delBtn.classList.add('hidden');
+      }
+
+      document.getElementById('visit-modal').classList.remove('hidden');
+    }
+
+    function closeModal() { document.getElementById('visit-modal').classList.add('hidden'); }
+
+    function saveVisit() {
+      const dateStr = document.getElementById('modal-date-str').value;
+      const centroId = parseInt(document.getElementById('modal-centro-id').value);
+      const modalidad = document.getElementById('modal-modalidad').value;
+      const planificacion = document.getElementById('modal-plan').value;
+      const observaciones = document.getElementById('modal-obs').value;
+
+      if (!centroId) { alert("Debes seleccionar un centro."); return; }
+
+      const existingIndex = db.visitas.findIndex(v => v.fecha === dateStr);
+      if (existingIndex >= 0) {
+        db.visitas[existingIndex] = { id: db.visitas[existingIndex].id, centro_id: centroId, fecha: dateStr, modalidad, planificacion, observaciones };
+      } else {
+        db.visitas.push({ id: Date.now(), centro_id: centroId, fecha: dateStr, modalidad, planificacion, observaciones });
+      }
+
+      saveStorage();
+      closeModal();
+      renderCalendar();
+    }
+
+    function deleteVisit() {
+      const dateStr = document.getElementById('modal-date-str').value;
+      if (confirm("¿Deseas eliminar la visita de este día?")) {
+        db.visitas = db.visitas.filter(v => v.fecha !== dateStr);
+        saveStorage();
+        closeModal();
+        renderCalendar();
+      }
+    }
+
+    // Gestión de Centros
+    function renderCentrosTable() {
+      const tbody = document.getElementById('centros-table-body');
+      tbody.innerHTML = db.centros.map(c => `
+        <tr class="border-b border-slate-100 hover:bg-slate-50">
+          <td class="p-2"><span class="w-4 h-4 rounded-full inline-block" style="background-color:${c.color}"></span></td>
+          <td class="p-2 font-semibold">${c.nombre}</td>
+          <td class="p-2 text-slate-500">${c.codigo || '-'}</td>
+          <td class="p-2 text-slate-500">${c.localidad || '-'}</td>
+          <td class="p-2 text-slate-500">${c.etapa || '-'}</td>
+          <td class="p-2 text-center space-x-2">
+            <button onclick="editCentro(${c.id})" class="text-blue-600 hover:underline text-xs font-bold">Editar</button>
+            <button onclick="deleteCentro(${c.id})" class="text-red-600 hover:underline text-xs font-bold">Eliminar</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function saveCentro() {
+      const id = document.getElementById('c-id').value;
+      const nombre = document.getElementById('c-nombre').value.trim();
+      if (!nombre) { alert("El nombre del centro es obligatorio."); return; }
+
+      const centroData = {
+        id: id ? parseInt(id) : Date.now(),
+        nombre,
+        codigo: document.getElementById('c-codigo').value.trim(),
+        localidad: document.getElementById('c-localidad').value.trim(),
+        etapa: document.getElementById('c-etapa').value,
+        contacto_nombre: document.getElementById('c-contacto').value.trim(),
+        contacto_email: document.getElementById('c-email').value.trim(),
+        color: document.getElementById('c-color').value
+      };
+
+      if (id) {
+        const idx = db.centros.findIndex(c => c.id === parseInt(id));
+        if (idx >= 0) db.centros[idx] = centroData;
+      } else {
+        db.centros.push(centroData);
+      }
+
+      saveStorage();
+      clearCentroForm();
+      renderCentrosTable();
+      updateFilterSelect();
+      renderCalendar();
+    }
+
+    function editCentro(id) {
+      const c = db.centros.find(item => item.id === id);
+      if (!c) return;
+      document.getElementById('c-id').value = c.id;
+      document.getElementById('c-nombre').value = c.nombre;
+      document.getElementById('c-codigo').value = c.codigo || '';
+      document.getElementById('c-localidad').value = c.localidad || '';
+      document.getElementById('c-etapa').value = c.etapa || 'Primaria';
+      document.getElementById('c-contacto').value = c.contacto_nombre || '';
+      document.getElementById('c-email').value = c.contacto_email || '';
+      document.getElementById('c-color').value = c.color || '#3b82f6';
+      document.getElementById('centro-form-title').innerText = "✏️ Editar Centro";
+    }
+
+    function deleteCentro(id) {
+      if (confirm("¿Eliminar este centro? Se eliminarán también sus visitas asociadas.")) {
+        db.centros = db.centros.filter(c => c.id !== id);
+        db.visitas = db.visitas.filter(v => v.centro_id !== id);
+        saveStorage();
+        renderCentrosTable();
+        updateFilterSelect();
+        renderCalendar();
+      }
+    }
+
+    function clearCentroForm() {
+      document.getElementById('c-id').value = '';
+      document.getElementById('c-nombre').value = '';
+      document.getElementById('c-codigo').value = '';
+      document.getElementById('c-localidad').value = '';
+      document.getElementById('c-contacto').value = '';
+      document.getElementById('c-email').value = '';
+      document.getElementById('c-color').value = '#3b82f6';
+      document.getElementById('centro-form-title').innerText = "➕ Datos del Centro";
+    }
+
+    function updateFilterSelect() {
+      const select = document.getElementById('filter-centro');
+      select.innerHTML = `<option value="0">Todos los centros</option>` +
+        db.centros.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+    }
+
+    // Render Historial
+    function renderHistorial() {
+      const tbody = document.getElementById('historial-table-body');
+      const sortedVisitas = [...db.visitas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+      tbody.innerHTML = sortedVisitas.map(v => {
+        const c = db.centros.find(centro => centro.id === v.centro_id);
+        return `
+          <tr class="border-b border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono font-bold text-xs">${v.fecha}</td>
+            <td class="p-2 font-semibold" style="color:${c ? c.color : '#000'}">${c ? c.nombre : 'Centro no encontrado'}</td>
+            <td class="p-2 text-xs text-slate-600">${v.modalidad || '-'}</td>
+            <td class="p-2 text-xs text-slate-700">${v.planificacion || '-'}</td>
+            <td class="p-2 text-xs text-slate-500">${v.observaciones || '-'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Exportar e Importar JSON
+    function exportData() {
+      const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `backup_visitas_escuela40_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          db = JSON.parse(event.target.result);
+          saveStorage();
+          renderCalendar();
+          renderCentrosTable();
+          updateFilterSelect();
+          alert("¡Datos importados correctamente!");
+        } catch (err) {
+          alert("Error al cargar el archivo JSON.");
+        }
+      };
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>
